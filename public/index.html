@@ -11,8 +11,16 @@
     --done: #16a34a; --done-soft: #ecfdf3; --skip: #dc2626; --skip-soft: #fef2f2;
     --lift: #7c3aed; --bike: #0891b2; --run: #ea580c;
   }
+  /* Manual choice (data-theme, set by the 🌙/☀️ toggle) wins; the media query
+     is only the pre-JS fallback for system dark mode. */
+  :root[data-theme="dark"] {
+    --bg: #111418; --card: #1a1f26; --text: #e8eaed; --muted: #9aa2ad;
+    --border: #2a313a; --accent: #5b8def; --accent-soft: #1d2735;
+    --done: #34c268; --done-soft: #14261b; --skip: #ef6a5f; --skip-soft: #2b1a18;
+    --lift: #a78bfa; --bike: #22d3ee; --run: #fb923c;
+  }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #111418; --card: #1a1f26; --text: #e8eaed; --muted: #9aa2ad;
       --border: #2a313a; --accent: #5b8def; --accent-soft: #1d2735;
       --done: #34c268; --done-soft: #14261b; --skip: #ef6a5f; --skip-soft: #2b1a18;
@@ -20,11 +28,14 @@
     }
   }
   * { box-sizing: border-box; }
+  /* The app owns the viewport: header on top, calendar fills whatever is left. */
+  html, body { height: 100%; }
   body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; }
-  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px;
+    display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 0 0 auto;
     padding: 14px 20px; background: var(--card); border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; z-index: 20; }
+    z-index: 20; }
   header h1 { font-size: 18px; margin: 0 auto 0 0; }
   .month-nav { display: flex; align-items: center; gap: 8px; }
   .month-label { font-weight: 600; min-width: 180px; text-align: center; }
@@ -39,24 +50,72 @@
     border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
-  /* ---------- Calendar ---------- */
-  main { padding: 18px; transition: margin-right 0.18s ease; }
-  body.editing main { margin-right: 452px; }
-  .cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
+  /* ---------- Layout: sidebar + calendar ---------- */
+  .layout { display: flex; align-items: stretch; flex: 1 1 auto; min-height: 0; position: relative; }
+  /* The calendar always spans the full width; the day drawer overlays it. */
+  main { flex: 1 1 auto; min-width: 0; min-height: 0; padding: 18px;
+    display: flex; flex-direction: column; }
+
+  /* ---------- Saved workouts sidebar ---------- */
+  /* A dedicated task bar: full height, flush against the left edge. */
+  #sidebar { display: none; flex: 0 0 252px; min-height: 0; flex-direction: column; gap: 22px;
+    background: var(--card); border-right: 1px solid var(--border);
+    padding: 16px 14px; overflow-y: auto; }
+  body.sidebar #sidebar { display: flex; }
+  #sidebar h3 { margin: 0 4px 8px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); }
+  .sum-row { display: flex; align-items: baseline; gap: 8px; padding: 5px 4px; font-size: 14px; }
+  .sum-label { color: var(--muted); }
+  .sum-val { margin-left: auto; font-weight: 600; text-align: right; }
+  .sum-sub { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
+  .sum-empty { font-size: 12.5px; color: var(--muted); margin: 2px 4px; line-height: 1.5; }
+  .tpl-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px;
+    background: var(--bg); border-left: 3px solid var(--muted); margin-bottom: 6px; cursor: pointer; }
+  .tpl-item:hover { background: var(--accent-soft); }
+  .tpl-item.lift { border-left-color: var(--lift); }
+  .tpl-item.bike { border-left-color: var(--bike); }
+  .tpl-item.run { border-left-color: var(--run); }
+  .tpl-name { flex: 1; font-size: 13px; font-weight: 600; line-height: 1.3;
+    overflow: hidden; text-overflow: ellipsis; }
+  .tpl-name small { font-weight: 400; color: var(--muted); }
+  .tpl-hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 4px; }
+  @media (max-width: 1000px) {
+    /* Overlay the calendar, but stay inside .layout (which begins below the
+       header) so the header — and the ☰ that closes this — is always clickable. */
+    body.sidebar #sidebar { position: absolute; left: 0; top: 0; bottom: 0; width: 264px;
+      z-index: 25; box-shadow: 8px 0 24px rgba(0,0,0,0.18); }
+  }
+  /* Compact header on small windows: icon-only title, tighter buttons. */
+  @media (max-width: 820px) {
+    header { padding: 8px 10px; gap: 6px; }
+    header h1 { font-size: 16px; }
+    .app-name, .hide-sm { display: none; }
+    .month-label { min-width: 0; font-size: 14px; white-space: nowrap; }
+    header button { padding: 5px 9px; font-size: 13px; }
+    #save-status { min-width: 0; }
+  }
+  .cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
+    margin-bottom: 8px; flex: 0 0 auto; }
   .cal-dow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;
     color: var(--muted); font-weight: 600; padding-left: 4px; }
-  .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
+  /* Rows share the leftover height equally, so the grid always fills the screen. */
+  #calendar { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  .cal-week { flex: 1 1 0; min-height: 0; display: grid;
+    grid-template-columns: repeat(7, 1fr); gap: 8px; }
   .cal-cell { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-    min-height: 108px; padding: 8px; cursor: pointer; display: flex; flex-direction: column;
-    gap: 5px; transition: border-color 0.12s, box-shadow 0.12s; overflow: hidden; }
+    min-height: 0; padding: 10px; cursor: pointer; display: flex; flex-direction: column;
+    gap: 6px; transition: border-color 0.12s, box-shadow 0.12s;
+    overflow-y: auto; overflow-x: hidden; }
+  /* Week view: one tall row of 7 days; the weekday name moves into each cell. */
+  body.weekview .cal-dow-row { display: none; }
   .cal-cell:hover { border-color: var(--accent); }
   .cal-cell.other { opacity: 0.5; }
   .cal-cell.today .cal-daynum { color: var(--accent); font-weight: 800; }
   .cal-cell.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-  .cal-daynum { font-size: 13px; font-weight: 600; color: var(--muted); }
-  .cal-cell.today .cal-daynum::after { content: " • today"; font-size: 10px; color: var(--accent); font-weight: 600; }
-  .chip { font-size: 12px; line-height: 1.25; padding: 3px 7px; border-radius: 6px;
-    display: flex; align-items: center; gap: 5px; border-left: 3px solid var(--muted);
+  .cal-daynum { font-size: 15px; font-weight: 600; color: var(--muted); }
+  .cal-cell.today .cal-daynum::after { content: " • today"; font-size: 11px; color: var(--accent); font-weight: 600; }
+  .chip { font-size: 13px; line-height: 1.3; padding: 5px 8px; border-radius: 6px; flex: 0 0 auto;
+    display: flex; align-items: center; gap: 6px; border-left: 3px solid var(--muted);
     background: var(--bg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chip.lift { border-left-color: var(--lift); }
   .chip.bike { border-left-color: var(--bike); }
@@ -117,10 +176,15 @@
     padding: 12px 18px; border-top: 1px solid var(--border); }
 
   @media (max-width: 900px) {
-    body.editing main { margin-right: 0; }
     #drawer { width: 100%; max-width: 460px; }
     body.editing #backdrop { display: block; position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,0.4); }
-    .cal-cell { min-height: 84px; }
+  }
+  /* Too narrow for 7 columns: stack the week into full-width day rows and scroll. */
+  @media (max-width: 700px) {
+    main { padding: 12px; }
+    body.weekview #calendar { overflow-y: auto; }
+    body.weekview .cal-week { flex: 0 0 auto; grid-template-columns: 1fr;
+      grid-auto-rows: minmax(74px, auto); }
   }
 
   /* ---------- Export modal ---------- */
@@ -142,21 +206,38 @@
 </head>
 <body>
 <header>
-  <h1>🏋️ Training Tracker</h1>
+  <button id="sidebar-toggle" title="Show/hide sidebar">☰</button>
+  <h1>🏋️ <span class="app-name">Training Tracker</span></h1>
   <span id="save-status"></span>
   <div class="month-nav">
     <button id="prev-month">‹</button>
     <span class="month-label" id="month-label"></span>
     <button id="next-month">›</button>
     <button id="today-btn">Today</button>
+    <button id="view-toggle"></button>
   </div>
-  <button class="primary" id="export-btn">Export for Claude</button>
+  <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
+  <button class="primary" id="export-btn">Export<span class="hide-sm"> for Claude</span></button>
 </header>
 
+<div class="layout">
+<aside id="sidebar">
+  <section>
+    <h3 id="summary-title">📊 Summary</h3>
+    <div id="summary"></div>
+  </section>
+  <section>
+    <h3>💪 Saved workouts</h3>
+    <div id="tpl-list"></div>
+    <p class="tpl-hint" id="tpl-hint">Build a workout in any day, then hit 💾 on the activity to save it here (e.g. "Push Day").
+    Click a saved workout to add it to the day you have open.</p>
+  </section>
+</aside>
 <main>
   <div class="cal-dow-row" id="cal-dow-row"></div>
   <div id="calendar"></div>
 </main>
+</div>
 
 <div id="backdrop"></div>
 <aside id="drawer" aria-hidden="true">
@@ -219,15 +300,23 @@ const SEG_PRESETS = ["Warmup", "Interval", "Recovery", "Steady", "Cooldown"];
 function blankSet() { return { reps: "", weight: "" }; }
 function blankExercise() { return { name: "", sets: [blankSet(), blankSet(), blankSet()] }; }
 function blankSegment(label) { return { label: label || "", amount: "", target: "" }; }
-function blankCardio() { return { title: "", segments: [], distance: "", duration: "", elevation: "", power: "", notes: "" }; }
+function blankCardio() { return { segments: [], distance: "", duration: "", elevation: "", power: "", notes: "" }; }
+// Tolerates activities that never went through normalize() (e.g. a hand-edited
+// workouts.json) — a missing title should read as unnamed, not throw.
+function titleOf(act) { return (act.title || "").trim(); }
 function blankActivity(type) {
-  return { type, status: "planned",
+  // `title` names the workout for every sport ("Push Day", "Threshold intervals").
+  // Empty means "use the sport's default name" — see TYPE_LABEL.
+  return { type, status: "planned", title: "",
     exercises: type === "lift" ? [blankExercise()] : [],
     cardio: blankCardio() };
 }
 
-let data = { days: {} };
+let data = { days: {}, templates: [] };
 let viewMonth = startOfMonth(new Date());
+let weekStart = mondayOf(new Date()); // anchor for week view
+let viewMode = "month";               // "month" | "week"
+let lastAuto = "month";               // last size-based recommendation; see resize wiring
 let editingKey = null;   // ISO date currently open in the drawer
 let seededDraft = false; // true when the open day was just seeded and untouched
 
@@ -249,7 +338,13 @@ function sameDay(a, b) { return isoDate(a) === isoDate(b); }
 
 // ---------- migration / normalization ----------
 function normalize(raw) {
-  const out = { days: {} };
+  const out = { days: {}, templates: [] };
+  if (raw && Array.isArray(raw.templates)) {
+    out.templates = raw.templates.map(t => {
+      const a = normalizeActivity(t);
+      return { name: t.name || "Workout", type: a.type, exercises: a.exercises, cardio: a.cardio };
+    });
+  }
   const putDay = (key, day) => {
     // v2 days carry an `activities` list; the oldest v1 days stored a single
     // activity's fields (type/status/exercises/cardio) directly on the day.
@@ -291,15 +386,17 @@ function normalizeActivity(act) {
     if (exercises.length === 0) exercises = [blankExercise()];
   }
   const oldC = act.cardio || {};
+  // `title` used to live on cardio (and before that, cardio.workout); it's now
+  // an activity-level field shared by lifts too.
+  const title = act.title || oldC.title || oldC.workout || "";
   const cardio = {
-    title: oldC.title || oldC.workout || "",
     segments: Array.isArray(oldC.segments)
       ? oldC.segments.map(s => ({ label: s.label || "", amount: s.amount || "", target: s.target || "" }))
       : [],
     distance: oldC.distance || "", duration: oldC.duration || "",
     elevation: oldC.elevation || "", power: oldC.power || "", notes: oldC.notes || ""
   };
-  return { type, status, exercises, cardio };
+  return { type, status, title, exercises, cardio };
 }
 
 // ---------- carry-forward seeding ----------
@@ -330,13 +427,26 @@ function seedDay(key) {
 }
 
 // ---------- persistence ----------
+function isEmptyDay(day) { return !day.activities.length && !(day.notes || "").trim(); }
+// What actually gets written to disk: drop empty days (a rest day is just the
+// absence of an entry — a saved empty day would block future carry-forward)
+// and drop the currently open day if it's still an untouched seeded draft.
+function buildPayload() {
+  const days = {};
+  for (const [k, day] of Object.entries(data.days)) {
+    if (isEmptyDay(day)) continue;
+    if (k === editingKey && seededDraft) continue;
+    days[k] = day;
+  }
+  return { days, templates: data.templates };
+}
 let saveTimer = null;
 function scheduleSave() {
   document.getElementById("save-status").textContent = "…";
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      const res = await fetch("/api/data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const res = await fetch("/api/data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(buildPayload()) });
       document.getElementById("save-status").textContent = res.ok ? "Saved ✓" : "Save failed!";
     } catch {
       document.getElementById("save-status").textContent = "Save failed!";
@@ -344,44 +454,148 @@ function scheduleSave() {
   }, 500);
 }
 // Any real edit commits the open day (so seeded drafts stop being discardable).
-function markEdited() { seededDraft = false; scheduleSave(); }
+function markEdited() { seededDraft = false; scheduleSave(); renderSummary(); }
+
+// ---------- summary (sidebar) ----------
+// The date span the calendar is currently showing: the viewed calendar month,
+// or the viewed week in week view.
+function visibleRange() {
+  if (viewMode === "week") return { from: isoDate(weekStart), to: isoDate(addDays(weekStart, 6)) };
+  return { from: isoDate(startOfMonth(viewMonth)), to: isoDate(endOfMonth(viewMonth)) };
+}
+function computeSummary(from, to) {
+  const s = { lifts: 0, sets: 0, rides: 0, bikeMi: 0, bikeFt: 0,
+    runs: 0, runMi: 0, runFt: 0, cardioMin: 0, skipped: 0 };
+  for (const k of keysInRange(from, to)) {
+    for (const act of data.days[k].activities) {
+      if (act.status === "skipped") { s.skipped++; continue; }
+      if (act.status !== "done") continue; // planned workouts aren't results yet
+      if (act.type === "lift") {
+        s.lifts++;
+        s.sets += act.exercises.reduce((n, e) => n + e.sets.filter(x => x.reps || x.weight).length, 0);
+      } else {
+        const c = act.cardio;
+        const mi = parseFloat(c.distance) || 0, ft = parseFloat(c.elevation) || 0;
+        s.cardioMin += parseFloat(c.duration) || 0;
+        if (act.type === "bike") { s.rides++; s.bikeMi += mi; s.bikeFt += ft; }
+        else { s.runs++; s.runMi += mi; s.runFt += ft; }
+      }
+    }
+  }
+  return s;
+}
+function fmtNum(x) { return (Math.round(x * 10) / 10).toLocaleString(); }
+function fmtMins(min) {
+  min = Math.round(min);
+  const h = Math.floor(min / 60);
+  return h ? `${h}h ${min % 60}m` : `${min}m`;
+}
+function renderSummary() {
+  const el = document.getElementById("summary");
+  document.getElementById("summary-title").textContent = "📊 " +
+    (viewMode === "week" ? "Week" : viewMonth.toLocaleDateString(undefined, { month: "long" })) + " summary";
+  const { from, to } = visibleRange();
+  const s = computeSummary(from, to);
+  el.innerHTML = "";
+  const row = (icon, label, val, sub) => {
+    const div = document.createElement("div");
+    div.className = "sum-row";
+    div.innerHTML = `<span>${icon}</span><span class="sum-label">${label}</span>` +
+      `<span class="sum-val">${escapeHtml(String(val))}` +
+      (sub ? `<span class="sum-sub">${escapeHtml(sub)}</span>` : "") + `</span>`;
+    el.appendChild(div);
+  };
+  if (s.lifts) row("🏋️", "Gym sessions", s.lifts, s.sets + " sets");
+  if (s.rides) row("🚴", "Rides", s.rides, `${fmtNum(s.bikeMi)} mi · ${fmtNum(s.bikeFt)} ft gain`);
+  if (s.runs) row("🏃", "Runs", s.runs, `${fmtNum(s.runMi)} mi · ${fmtNum(s.runFt)} ft gain`);
+  if (s.cardioMin) row("⏱️", "Cardio time", fmtMins(s.cardioMin), "");
+  if (s.skipped) row("⏭️", "Skipped", s.skipped, "");
+  if (!s.lifts && !s.rides && !s.runs && !s.skipped) {
+    el.innerHTML = '<p class="sum-empty">No completed workouts in this period yet.</p>';
+  }
+}
+
+// ---------- view mode ----------
+// Below these sizes a 6-row month grid gets too cramped to use, so show one week.
+function autoMode() { return (window.innerWidth < 900 || window.innerHeight < 560) ? "week" : "month"; }
+function weekLabel() {
+  const end = addDays(weekStart, 6);
+  const sameMonth = weekStart.getMonth() === end.getMonth();
+  const a = weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const b = end.toLocaleDateString(undefined, sameMonth ? { day: "numeric" } : { month: "short", day: "numeric" });
+  return `${a} – ${b}, ${end.getFullYear()}`;
+}
+function setMode(mode) {
+  if (mode === viewMode) return;
+  // Keep the two anchors in sync so switching views stays where you were.
+  if (mode === "week") {
+    const t = new Date();
+    weekStart = (t >= startOfMonth(viewMonth) && t <= endOfMonth(viewMonth))
+      ? mondayOf(t) : mondayOf(startOfMonth(viewMonth));
+  } else {
+    viewMonth = startOfMonth(weekStart);
+  }
+  viewMode = mode;
+  renderApp();
+}
+// One step = one month in month view, one week in week view.
+function stepView(dir) {
+  stopEditing();
+  if (viewMode === "week") weekStart = addDays(weekStart, 7 * dir);
+  else viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + dir, 1);
+  renderApp();
+}
 
 // ---------- calendar ----------
 function renderCalendar() {
-  document.getElementById("month-label").textContent =
-    viewMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const isWeek = viewMode === "week";
+  document.body.classList.toggle("weekview", isWeek);
+  document.getElementById("view-toggle").textContent = isWeek ? "Week" : "Month";
+  document.getElementById("view-toggle").title =
+    isWeek ? "Switch to month view" : "Switch to week view";
+  document.getElementById("month-label").textContent = isWeek
+    ? weekLabel()
+    : viewMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const dow = document.getElementById("cal-dow-row");
   dow.innerHTML = DAY_ORDER.map(d => `<div class="cal-dow">${d}</div>`).join("");
 
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
   const today = new Date();
-  const last = endOfMonth(viewMonth);
-  let weekStart = mondayOf(viewMonth);
-  for (let w = 0; w < 6; w++) {
-    const row = document.createElement("div");
-    row.className = "cal-week";
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(weekStart, i);
-      row.appendChild(renderCell(date, today));
+  if (isWeek) {
+    cal.appendChild(renderWeekRow(weekStart, today, true));
+  } else {
+    const last = endOfMonth(viewMonth);
+    let ws = mondayOf(viewMonth);
+    for (let w = 0; w < 6; w++) {
+      cal.appendChild(renderWeekRow(ws, today, false));
+      ws = addDays(ws, 7);
+      if (ws > last) break; // stop once we've covered the month
     }
-    cal.appendChild(row);
-    weekStart = addDays(weekStart, 7);
-    if (weekStart > last) break; // stop once we've covered the month
   }
+  renderSummary(); // the summary tracks whatever period the calendar shows
 }
 
-function renderCell(date, today) {
+function renderWeekRow(start, today, showDayName) {
+  const row = document.createElement("div");
+  row.className = "cal-week";
+  for (let i = 0; i < 7; i++) row.appendChild(renderCell(addDays(start, i), today, showDayName));
+  return row;
+}
+
+function renderCell(date, today, showDayName) {
   const key = isoDate(date);
   const cell = document.createElement("div");
   cell.className = "cal-cell";
-  if (date.getMonth() !== viewMonth.getMonth()) cell.classList.add("other");
+  // Dimming "other" days only means something against a month grid.
+  if (!showDayName && date.getMonth() !== viewMonth.getMonth()) cell.classList.add("other");
   if (sameDay(date, today)) cell.classList.add("today");
   if (key === editingKey) cell.classList.add("selected");
 
   const num = document.createElement("div");
   num.className = "cal-daynum";
-  num.textContent = date.getDate();
+  // Week view has no weekday header row, so name the day in the cell.
+  num.textContent = showDayName ? `${weekdayKey(date)} ${date.getDate()}` : date.getDate();
   cell.appendChild(num);
 
   const day = data.days[key];
@@ -394,15 +608,14 @@ function renderCell(date, today) {
 function chipFor(act) {
   const chip = document.createElement("div");
   chip.className = `chip ${act.type} ${act.status}`;
-  let label, stat = "";
+  // The workout's name leads; the sport's label stands in when it's unnamed.
+  const label = titleOf(act) || TYPE_LABEL[act.type];
+  let stat = "";
   if (act.type === "lift") {
-    const named = act.exercises.filter(e => e.name.trim());
-    label = named.length ? named[0].name + (named.length > 1 ? ` +${named.length - 1}` : "") : "Lifting";
-  } else {
-    label = act.cardio.title || TYPE_LABEL[act.type];
-    if (act.cardio.distance) stat = act.cardio.distance + "mi";
-    else if (act.cardio.duration) stat = act.cardio.duration + "min";
-  }
+    const named = act.exercises.filter(e => e.name.trim()).length;
+    if (named) stat = named + " ex";
+  } else if (act.cardio.distance) stat = act.cardio.distance + "mi";
+  else if (act.cardio.duration) stat = act.cardio.duration + "min";
   chip.innerHTML = `<span>${TYPE_ICON[act.type]}</span>` +
     `<span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(label)}</span>` +
     (stat ? `<span class="stat">${escapeHtml(stat)}</span>` : "");
@@ -420,7 +633,9 @@ function stopEditing() {
 function openDay(key) {
   if (editingKey && editingKey !== key && seededDraft) delete data.days[editingKey];
   editingKey = key;
-  if (!data.days[key]) { data.days[key] = seedDay(key); seededDraft = true; }
+  // Re-seed days that don't exist OR exist but are empty — an empty day is
+  // just a rest day, and reopening it should offer the carried-forward plan.
+  if (!data.days[key] || isEmptyDay(data.days[key])) { data.days[key] = seedDay(key); seededDraft = true; }
   else seededDraft = false;
   document.body.classList.add("editing");
   document.getElementById("drawer").setAttribute("aria-hidden", "false");
@@ -482,12 +697,25 @@ function renderActivity(act, day) {
   skipBtn.textContent = act.status === "skipped" ? "⏭ Skipped" : "Skip";
   if (act.status === "skipped") skipBtn.className = "active-skip";
   skipBtn.onclick = () => { act.status = act.status === "skipped" ? "planned" : "skipped"; markEdited(); renderApp(); };
+  const tplBtn = document.createElement("button");
+  tplBtn.className = "ghost"; tplBtn.title = "Save as reusable workout (shows in sidebar)"; tplBtn.textContent = "💾";
+  tplBtn.onclick = () => saveTemplate(act);
   const delBtn = document.createElement("button");
   delBtn.className = "ghost"; delBtn.title = "Remove this activity"; delBtn.textContent = "✕";
   delBtn.onclick = () => { day.activities = day.activities.filter(a => a !== act); markEdited(); renderApp(); };
-  status.append(doneBtn, skipBtn, delBtn);
+  status.append(doneBtn, skipBtn, tplBtn, delBtn);
   head.appendChild(status);
   box.appendChild(head);
+
+  const titleLabel = document.createElement("div");
+  titleLabel.className = "field-label"; titleLabel.textContent = "Workout name";
+  const title = document.createElement("input");
+  title.style.width = "100%";
+  title.placeholder = TYPE_LABEL[act.type]; // shows the default name when unnamed
+  title.value = act.title || "";
+  // Re-render the calendar (not the drawer) so the chip updates without losing focus.
+  title.oninput = () => { act.title = title.value; markEdited(); renderCalendar(); };
+  box.append(titleLabel, title);
 
   box.appendChild(act.type === "lift" ? renderLift(act) : renderCardio(act));
   return box;
@@ -556,15 +784,6 @@ function renderLift(act) {
 function renderCardio(act) {
   const c = act.cardio;
   const wrap = document.createElement("div");
-
-  const titleLabel = document.createElement("div");
-  titleLabel.className = "field-label"; titleLabel.textContent = "Workout";
-  const title = document.createElement("input");
-  title.style.width = "100%";
-  title.placeholder = act.type === "bike" ? "e.g. Threshold intervals" : "e.g. Fartlek session";
-  title.value = c.title;
-  title.oninput = () => { c.title = title.value; markEdited(); };
-  wrap.append(titleLabel, title);
 
   const structLabel = document.createElement("div");
   structLabel.className = "field-label"; structLabel.textContent = "Structure";
@@ -635,6 +854,72 @@ function renderCardio(act) {
   return wrap;
 }
 
+// ---------- saved workout templates ----------
+function saveTemplate(act) {
+  const name = prompt('Name this workout (e.g. "Push Day"):', act.title || "");
+  if (!name || !name.trim()) return;
+  const tpl = JSON.parse(JSON.stringify({ name: name.trim(), type: act.type, exercises: act.exercises, cardio: act.cardio }));
+  // Templates store the plan, not one day's results.
+  tpl.cardio.distance = tpl.cardio.duration = tpl.cardio.elevation = tpl.cardio.power = tpl.cardio.notes = "";
+  data.templates.push(tpl);
+  // Naming the template names the workout it came from, if it had no name yet.
+  if (!titleOf(act)) act.title = tpl.name;
+  scheduleSave(); renderApp();
+}
+
+// An activity that holds no real content yet (e.g. the blank seeded default) —
+// applying a template replaces it instead of stacking a second activity.
+function isBlankActivity(act) {
+  if (act.status !== "planned") return false;
+  const hasLift = act.exercises.some(e => e.name.trim() || e.sets.some(s => s.reps || s.weight));
+  const c = act.cardio;
+  const hasCardio = c.segments.length || c.distance || c.duration || c.elevation || c.power || c.notes;
+  return !titleOf(act) && !hasLift && !hasCardio;
+}
+
+function applyTemplate(tpl) {
+  if (!editingKey) {
+    alert("Click a day on the calendar first, then click a saved workout to add it to that day.");
+    return;
+  }
+  // The saved workout's name becomes the activity's name.
+  const act = { type: tpl.type, status: "planned", title: tpl.name,
+    exercises: JSON.parse(JSON.stringify(tpl.exercises || [])),
+    cardio: JSON.parse(JSON.stringify(tpl.cardio || blankCardio())) };
+  if (act.type === "lift" && !act.exercises.length) act.exercises = [blankExercise()];
+  const day = data.days[editingKey];
+  const blankIdx = day.activities.findIndex(isBlankActivity);
+  if (blankIdx >= 0) day.activities.splice(blankIdx, 1, act);
+  else day.activities.push(act);
+  markEdited(); renderApp();
+}
+
+function renderSidebar() {
+  const list = document.getElementById("tpl-list");
+  list.innerHTML = "";
+  document.getElementById("tpl-hint").style.display = data.templates.length ? "none" : "block";
+  data.templates.forEach((tpl, i) => {
+    const item = document.createElement("div");
+    item.className = "tpl-item " + tpl.type;
+    const summary = tpl.type === "lift"
+      ? tpl.exercises.filter(e => e.name.trim()).length + " exercises"
+      : (tpl.cardio.segments.length ? tpl.cardio.segments.length + " segments" : TYPE_LABEL[tpl.type]);
+    item.innerHTML = `<span>${TYPE_ICON[tpl.type]}</span>` +
+      `<span class="tpl-name">${escapeHtml(tpl.name)}<br><small>${escapeHtml(summary)}</small></span>`;
+    const del = document.createElement("button");
+    del.className = "ghost"; del.textContent = "✕"; del.title = "Delete saved workout";
+    del.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm(`Delete saved workout "${tpl.name}"?`)) {
+        data.templates.splice(i, 1); scheduleSave(); renderSidebar();
+      }
+    };
+    item.appendChild(del);
+    item.onclick = () => applyTemplate(tpl);
+    list.appendChild(item);
+  });
+}
+
 // ---------- export ----------
 // Keys within [from, to] inclusive; empty bound means unbounded. ISO dates
 // sort correctly as strings, so plain comparison is enough.
@@ -664,8 +949,9 @@ function buildMarkdown(from, to) {
     const date = parseISO(key);
     lines.push(`## ${DAY_FULL[weekdayKey(date)]} ${key}`);
     for (const act of day.activities) {
+      const named = titleOf(act) ? " — " + titleOf(act) : "";
       if (act.type === "lift") {
-        lines.push(`**Weightlifting — ${act.status}**`);
+        lines.push(`**Weightlifting — ${act.status}**${named}`);
         for (const ex of act.exercises) {
           if (!ex.name.trim() && !ex.sets.some(s => s.reps || s.weight)) continue;
           const setStr = ex.sets
@@ -675,7 +961,7 @@ function buildMarkdown(from, to) {
         }
       } else {
         const c = act.cardio;
-        lines.push(`**${TYPE_LABEL[act.type]} — ${act.status}**${c.title ? " — " + c.title : ""}`);
+        lines.push(`**${TYPE_LABEL[act.type]} — ${act.status}**${named}`);
         const segs = c.segments.filter(s => s.label || s.amount || s.target);
         if (segs.length) {
           const parts = segs.map(s => {
@@ -710,9 +996,70 @@ function download(filename, text, mime) {
 }
 
 // ---------- wiring ----------
-document.getElementById("prev-month").onclick = () => { closeDay(); viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1); renderCalendar(); };
-document.getElementById("next-month").onclick = () => { closeDay(); viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1); renderCalendar(); };
-document.getElementById("today-btn").onclick = () => { viewMonth = startOfMonth(new Date()); openDay(isoDate(new Date())); };
+document.getElementById("prev-month").onclick = () => stepView(-1);
+document.getElementById("next-month").onclick = () => stepView(1);
+document.getElementById("today-btn").onclick = () => {
+  viewMonth = startOfMonth(new Date());
+  weekStart = mondayOf(new Date());
+  openDay(isoDate(new Date()));
+};
+document.getElementById("view-toggle").onclick = () => setMode(viewMode === "month" ? "week" : "month");
+// Auto-switch whenever the window CROSSES the size threshold. A manual
+// Month/Week choice is respected while the window stays in the same size
+// class, but the next crossing puts auto back in charge — so shrinking the
+// window always gets week view, and growing it always gets month view back.
+window.addEventListener("resize", () => {
+  const auto = autoMode();
+  if (auto !== lastAuto) { lastAuto = auto; setMode(auto); }
+});
+
+// ---------- wheel navigation ----------
+// Walk up from the wheel target looking for something that can actually scroll
+// in this direction (an overflowing day cell, or the stacked week list). If we
+// find one, let the browser scroll it instead of changing the month.
+function scrollableUnder(from, dy) {
+  let el = from;
+  while (el && el !== document.body) {
+    const oy = getComputedStyle(el).overflowY;
+    if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight + 1) {
+      const atTop = el.scrollTop <= 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+      if (!(dy < 0 && atTop) && !(dy > 0 && atBottom)) return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+let wheelReadyAt = 0;
+document.getElementById("calendar").addEventListener("wheel", (e) => {
+  if (!e.deltaY) return;
+  if (scrollableUnder(e.target, e.deltaY)) return;
+  e.preventDefault();
+  // One trackpad swipe fires a burst of events; ignore the tail.
+  const now = Date.now();
+  if (now < wheelReadyAt) return;
+  wheelReadyAt = now + 350;
+  stepView(e.deltaY < 0 ? -1 : 1);
+}, { passive: false });
+document.getElementById("sidebar-toggle").onclick = () => document.body.classList.toggle("sidebar");
+
+// ---------- theme ----------
+function systemDark() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+function currentTheme() {
+  return localStorage.getItem("theme") || (systemDark() ? "dark" : "light");
+}
+function applyTheme(theme, persist) {
+  document.documentElement.dataset.theme = theme;
+  if (persist) localStorage.setItem("theme", theme);
+  const btn = document.getElementById("theme-toggle");
+  btn.textContent = theme === "dark" ? "☀️" : "🌙";
+  btn.title = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+}
+document.getElementById("theme-toggle").onclick = () =>
+  applyTheme(currentTheme() === "dark" ? "light" : "dark", true);
+applyTheme(currentTheme(), false); // honor a saved choice, else follow the system
 document.getElementById("drawer-close").onclick = closeDay;
 document.getElementById("backdrop").onclick = closeDay;
 document.getElementById("clear-day").onclick = () => {
@@ -801,8 +1148,12 @@ document.body.appendChild(dl);
     const res = await fetch("/api/data");
     data = normalize(await res.json());
   } catch {
-    data = { days: {} };
+    data = { days: {}, templates: [] };
   }
+  if (window.innerWidth >= 1000) document.body.classList.add("sidebar");
+  lastAuto = autoMode();
+  viewMode = lastAuto;
+  renderSidebar();
   renderCalendar();
 })();
 </script>
