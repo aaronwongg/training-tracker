@@ -1,0 +1,13 @@
+# Personal training data — never commit this. Each user keeps their own local log.
+data/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/
